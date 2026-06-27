@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: donaton-frontend
+  namespace: donaton
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: donaton-frontend
+  template:
+    metadata:
+      labels:
+        app: donaton-frontend
+    spec:
+      containers:
+        - name: donaton-frontend
+          image: 853605089904.dkr.ecr.us-east-1.amazonaws.com/donaton-frontend:eks-v1
+          ports:
+            - containerPort: 80
+          env:
+            - name: VITE_API_URL
+              value: "http://URL_BACKEND_RICARDO"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"

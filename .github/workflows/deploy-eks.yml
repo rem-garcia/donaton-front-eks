@@ -1,0 +1,46 @@
+name: CI/CD Donaton Frontend EKS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build y push imagen Docker
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: eks-v1
+        run: |
+          docker build -t $ECR_REGISTRY/donaton-frontend:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/donaton-frontend:$IMAGE_TAG
+
+      - name: Actualizar kubeconfig
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name donaton-front-eks
+
+      - name: Desplegar en EKS
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
+          kubectl apply -f k8s/frontend-service.yaml
+          kubectl apply -f k8s/frontend-hpa.yaml
+          kubectl rollout status deployment/donaton-frontend -n donaton
